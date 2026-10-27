@@ -1,0 +1,15 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "resumen",
+  "displayName": "Resumen del sistema",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "visualInteractions": [
+    {
+      "source": "resumen_filtro_tipo",
+      "target": "resumen_linea_sistema",
+      "type": "NoFilter"
+    }
+  ]
+}

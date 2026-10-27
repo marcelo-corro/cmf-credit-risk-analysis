@@ -1,0 +1,16 @@
+{
+  "name": "Tema CMF",
+  "dataColors": [
+    "#1F4E79",
+    "#C0504D",
+    "#2E8B57",
+    "#E39B2D",
+    "#7F6084",
+    "#4BACC6",
+    "#8C8C8C",
+    "#B5838D"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#252423",
+  "tableAccent": "#1F4E79"
+}

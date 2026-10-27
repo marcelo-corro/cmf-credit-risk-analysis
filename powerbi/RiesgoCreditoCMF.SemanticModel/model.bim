@@ -1,0 +1,620 @@
+{
+  "compatibilityLevel": 1567,
+  "model": {
+    "culture": "es-ES",
+    "dataAccessOptions": {
+      "legacyRedirects": true,
+      "returnErrorValuesAsNull": true
+    },
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "sourceQueryCulture": "es-CL",
+    "tables": [
+      {
+        "name": "Provisiones",
+        "lineageTag": "49d496ef-98bc-5f4c-bd02-14284446ebba",
+        "columns": [
+          {
+            "name": "Fecha",
+            "dataType": "dateTime",
+            "sourceColumn": "Fecha",
+            "formatString": "dd-mm-yyyy",
+            "isHidden": true,
+            "lineageTag": "7227e349-b030-57e7-b095-0d599294bc31",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "UnderlyingDateTimeDataType",
+                "value": "Date"
+              }
+            ]
+          },
+          {
+            "name": "Banco Original",
+            "dataType": "string",
+            "sourceColumn": "Banco Original",
+            "isHidden": true,
+            "lineageTag": "9208ff34-1350-527b-a260-251a72315805",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Tipo",
+            "dataType": "string",
+            "sourceColumn": "Tipo",
+            "lineageTag": "05a88236-016e-56ac-b9de-e8d046c0e7b3",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Valor",
+            "dataType": "double",
+            "sourceColumn": "Valor",
+            "formatString": "0.00%",
+            "isHidden": true,
+            "lineageTag": "63a1d417-886c-5b0b-b104-31a429ccaa6f",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Provisiones",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    // Lee un CSV del proyecto (UTF-8, primera fila como encabezado)",
+                "    LeerCsv = (archivo as text) as table =>",
+                "        Table.PromoteHeaders(",
+                "            Csv.Document(",
+                "                File.Contents(RutaDatos & \"data\\processed\\\" & archivo),",
+                "                [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]",
+                "            ),",
+                "            [PromoteAllScalars = true]",
+                "        ),",
+                "",
+                "    // Bancos + fila oficial del sistema en una sola tabla",
+                "    Unidas = Table.Combine({",
+                "        LeerCsv(\"provisiones_por_tipo.csv\"),",
+                "        LeerCsv(\"provisiones_por_tipo_sistema.csv\")",
+                "    }),",
+                "",
+                "    // De una columna por tipo a una fila por banco, mes y tipo de crédito",
+                "    Largo = Table.UnpivotOtherColumns(Unidas, {\"fecha\", \"banco\"}, \"Tipo\", \"Valor\"),",
+                "    SinVacios = Table.SelectRows(Largo, each [Valor] <> \"\" and [Valor] <> null),",
+                "",
+                "    // \"indice_consumo\" -> \"Consumo\"",
+                "    TipoLimpio = Table.TransformColumns(",
+                "        SinVacios,",
+                "        {{\"Tipo\", each Text.Proper(Text.AfterDelimiter(_, \"indice_\")), type text}}",
+                "    ),",
+                "",
+                "    // Los CSV usan punto decimal: se convierte con cultura en-US",
+                "    // para que el resultado no dependa del idioma de Windows",
+                "    Tipos = Table.TransformColumnTypes(",
+                "        TipoLimpio,",
+                "        {{\"fecha\", type date}, {\"banco\", type text}, {\"Valor\", type number}},",
+                "        \"en-US\"",
+                "    ),",
+                "",
+                "    // 7.28 -> 0.0728, para usar formato de porcentaje",
+                "    Proporcion = Table.TransformColumns(Tipos, {{\"Valor\", each _ / 100, type number}}),",
+                "",
+                "    Renombradas = Table.RenameColumns(Proporcion, {{\"fecha\", \"Fecha\"}, {\"banco\", \"Banco Original\"}})",
+                "in",
+                "    Renombradas"
+              ]
+            }
+          }
+        ],
+        "annotations": [
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ]
+      },
+      {
+        "name": "Bancos",
+        "lineageTag": "163dd81c-7779-582b-b70c-9c5f72c7ce03",
+        "columns": [
+          {
+            "name": "Banco Original",
+            "dataType": "string",
+            "sourceColumn": "Banco Original",
+            "isHidden": true,
+            "lineageTag": "13640338-4a76-50d3-b76a-38c29989ac1a",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Banco",
+            "dataType": "string",
+            "sourceColumn": "Banco",
+            "lineageTag": "d8557306-5003-5176-acf3-bab0e1f332f5",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Segmento",
+            "dataType": "string",
+            "sourceColumn": "Segmento",
+            "sortByColumn": "Orden Segmento",
+            "lineageTag": "3c98355d-7e50-5e74-bed0-9f12a8e055f9",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Orden Segmento",
+            "dataType": "int64",
+            "sourceColumn": "Orden Segmento",
+            "formatString": "0",
+            "isHidden": true,
+            "lineageTag": "7c4cdbb4-ed95-50e9-9da6-8e0676ff97eb",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Nota",
+            "dataType": "string",
+            "sourceColumn": "Nota",
+            "lineageTag": "e91e82ec-2d0c-57fd-8a85-409c95e84ac8",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Meses con datos",
+            "dataType": "int64",
+            "formatString": "0",
+            "lineageTag": "7ce3bfc5-2baf-5dae-b185-00595db9a3c6",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "type": "calculated",
+            "isDataTypeInferred": true,
+            "expression": [
+              "CALCULATE (",
+              "    DISTINCTCOUNT ( Provisiones[Fecha] ),",
+              "    ALLEXCEPT ( Bancos, Bancos[Banco] )",
+              ")"
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Bancos",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Origen = Csv.Document(",
+                "        File.Contents(RutaDatos & \"powerbi\\dim_banco.csv\"),",
+                "        [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]",
+                "    ),",
+                "    Encabezados = Table.PromoteHeaders(Origen, [PromoteAllScalars = true]),",
+                "    Tipos = Table.TransformColumnTypes(Encabezados, {",
+                "        {\"banco_original\", type text},",
+                "        {\"banco\", type text},",
+                "        {\"segmento\", type text},",
+                "        {\"orden_segmento\", Int64.Type},",
+                "        {\"nota\", type text}",
+                "    }),",
+                "    Renombradas = Table.RenameColumns(Tipos, {",
+                "        {\"banco_original\", \"Banco Original\"},",
+                "        {\"banco\", \"Banco\"},",
+                "        {\"segmento\", \"Segmento\"},",
+                "        {\"orden_segmento\", \"Orden Segmento\"},",
+                "        {\"nota\", \"Nota\"}",
+                "    })",
+                "in",
+                "    Renombradas"
+              ]
+            }
+          }
+        ],
+        "annotations": [
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ]
+      },
+      {
+        "name": "Calendario",
+        "lineageTag": "c59cf826-3c5e-5d37-a387-1c51bc674e5e",
+        "columns": [
+          {
+            "name": "Fecha",
+            "dataType": "dateTime",
+            "type": "calculatedTableColumn",
+            "isNameInferred": true,
+            "isDataTypeInferred": true,
+            "sourceColumn": "[Fecha]",
+            "formatString": "mmm yyyy",
+            "lineageTag": "bdb60b82-9485-5f3b-97a0-50339806e1e0",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "UnderlyingDateTimeDataType",
+                "value": "Date"
+              }
+            ]
+          },
+          {
+            "name": "Año",
+            "dataType": "int64",
+            "type": "calculatedTableColumn",
+            "isNameInferred": true,
+            "isDataTypeInferred": true,
+            "sourceColumn": "[Año]",
+            "formatString": "0",
+            "lineageTag": "b165332a-7503-55be-83dd-5835834741d7",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Mes",
+            "dataType": "string",
+            "type": "calculatedTableColumn",
+            "isNameInferred": true,
+            "isDataTypeInferred": true,
+            "sourceColumn": "[Mes]",
+            "sortByColumn": "Orden Mes",
+            "lineageTag": "44d522f1-55dc-5d50-9d41-a8d96516a4ae",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Orden Mes",
+            "dataType": "int64",
+            "type": "calculatedTableColumn",
+            "isNameInferred": true,
+            "isDataTypeInferred": true,
+            "sourceColumn": "[Orden Mes]",
+            "formatString": "0",
+            "isHidden": true,
+            "lineageTag": "03e7fcf8-7ca4-5158-be55-815e9a00db5e",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Período",
+            "dataType": "string",
+            "type": "calculatedTableColumn",
+            "isNameInferred": true,
+            "isDataTypeInferred": true,
+            "sourceColumn": "[Período]",
+            "sortByColumn": "Orden Período",
+            "lineageTag": "8b659c48-8f51-5716-bd28-03f4137fdcf5",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Orden Período",
+            "dataType": "int64",
+            "type": "calculatedTableColumn",
+            "isNameInferred": true,
+            "isDataTypeInferred": true,
+            "sourceColumn": "[Orden Período]",
+            "formatString": "0",
+            "isHidden": true,
+            "lineageTag": "632c13dd-ad58-5936-adfc-1efb3cd125c1",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Calendario",
+            "mode": "import",
+            "source": {
+              "type": "calculated",
+              "expression": [
+                "VAR Inicio = COALESCE ( MIN ( Provisiones[Fecha] ), DATE ( 2016, 1, 1 ) )",
+                "VAR Fin = COALESCE ( MAX ( Provisiones[Fecha] ), DATE ( 2016, 1, 1 ) )",
+                "VAR Meses =",
+                "    FILTER ( CALENDAR ( Inicio, Fin ), DAY ( [Date] ) = 1 )",
+                "RETURN",
+                "    ADDCOLUMNS (",
+                "        SELECTCOLUMNS ( Meses, \"Fecha\", [Date] ),",
+                "        \"Año\", YEAR ( [Fecha] ),",
+                "        \"Mes\", FORMAT ( [Fecha], \"mmm yyyy\" ),",
+                "        \"Orden Mes\", YEAR ( [Fecha] ) * 100 + MONTH ( [Fecha] ),",
+                "        \"Período\",",
+                "            SWITCH (",
+                "                TRUE (),",
+                "                [Fecha] < DATE ( 2020, 3, 1 ), \"Pre-COVID\",",
+                "                [Fecha] <= DATE ( 2021, 6, 1 ), \"COVID\",",
+                "                \"Post-COVID\"",
+                "            ),",
+                "        \"Orden Período\",",
+                "            SWITCH (",
+                "                TRUE (),",
+                "                [Fecha] < DATE ( 2020, 3, 1 ), 1,",
+                "                [Fecha] <= DATE ( 2021, 6, 1 ), 2,",
+                "                3",
+                "            )",
+                "    )"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Medidas",
+        "lineageTag": "f91d610e-6e58-53f5-99ed-77343889add5",
+        "columns": [
+          {
+            "name": "Columna",
+            "dataType": "int64",
+            "type": "calculatedTableColumn",
+            "isNameInferred": true,
+            "isDataTypeInferred": true,
+            "sourceColumn": "[Columna]",
+            "isHidden": true,
+            "lineageTag": "2740818e-5852-5fa4-8218-9da3cb177e60",
+            "summarizeBy": "none",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Medidas",
+            "mode": "import",
+            "source": {
+              "type": "calculated",
+              "expression": [
+                "ROW ( \"Columna\", 0 )"
+              ]
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Índice",
+            "expression": [
+              "IF (",
+              "    HASONEVALUE ( Provisiones[Tipo] ),",
+              "    AVERAGE ( Provisiones[Valor] )",
+              ")"
+            ],
+            "formatString": "0.00%",
+            "lineageTag": "ca816aa0-75d3-5b80-8da7-68f799202ced"
+          },
+          {
+            "name": "Índice Sistema",
+            "expression": [
+              "CALCULATE (",
+              "    [Índice],",
+              "    REMOVEFILTERS ( Bancos ),",
+              "    Bancos[Segmento] = \"Sistema\"",
+              ")"
+            ],
+            "formatString": "0.00%",
+            "lineageTag": "89c24da9-850c-5945-8acf-7ea77b6197fd"
+          },
+          {
+            "name": "Brecha vs Sistema (pp)",
+            "expression": [
+              "IF (",
+              "    NOT ISBLANK ( [Índice] ),",
+              "    ( [Índice] - [Índice Sistema] ) * 100",
+              ")"
+            ],
+            "formatString": "+0.00\" pp\";-0.00\" pp\";0.00\" pp\"",
+            "lineageTag": "76d73e3a-4a6e-5a83-8332-a4c75a5a37ac"
+          },
+          {
+            "name": "Fecha Último Dato",
+            "expression": [
+              "CALCULATE ( MAX ( Provisiones[Fecha] ), ALLSELECTED ( Calendario ) )"
+            ],
+            "formatString": "mmm yyyy",
+            "lineageTag": "0f96c1d3-fe3b-5946-a6c3-3db960461331"
+          },
+          {
+            "name": "Índice Último Mes",
+            "expression": [
+              "VAR UltimaFecha = [Fecha Último Dato]",
+              "RETURN",
+              "    CALCULATE ( [Índice], Calendario[Fecha] = UltimaFecha )"
+            ],
+            "formatString": "0.00%",
+            "lineageTag": "5514fc03-ff78-5ef3-a32d-a88af5457eed"
+          },
+          {
+            "name": "Var 12 meses (pp)",
+            "expression": [
+              "VAR UltimaFecha = [Fecha Último Dato]",
+              "VAR Actual =",
+              "    CALCULATE ( [Índice], Calendario[Fecha] = UltimaFecha )",
+              "VAR Anterior =",
+              "    CALCULATE (",
+              "        [Índice],",
+              "        REMOVEFILTERS ( Calendario ),",
+              "        Calendario[Fecha] = EDATE ( UltimaFecha, -12 )",
+              "    )",
+              "RETURN",
+              "    IF (",
+              "        NOT ISBLANK ( Actual ) && NOT ISBLANK ( Anterior ),",
+              "        ( Actual - Anterior ) * 100",
+              "    )"
+            ],
+            "formatString": "+0.00\" pp\";-0.00\" pp\";0.00\" pp\"",
+            "lineageTag": "b7864065-0694-513a-b0b8-ee5d78027186"
+          },
+          {
+            "name": "Ranking",
+            "expression": [
+              "VAR BancosVisibles =",
+              "    CALCULATETABLE ( VALUES ( Bancos[Banco] ), ALLSELECTED ( Bancos ) )",
+              "RETURN",
+              "    IF (",
+              "        HASONEVALUE ( Bancos[Banco] ) && NOT ISBLANK ( [Índice] ),",
+              "        RANKX (",
+              "            BancosVisibles,",
+              "            CALCULATE ( [Índice], ALLEXCEPT ( Bancos, Bancos[Banco] ) ),",
+              "            ,",
+              "            DESC,",
+              "            DENSE",
+              "        )",
+              "    )"
+            ],
+            "formatString": "0",
+            "lineageTag": "b42d55d4-8818-599f-be8a-0ad6d6445a5e"
+          },
+          {
+            "name": "Desv. Estándar (pp)",
+            "expression": [
+              "VAR MesesConDato =",
+              "    FILTER ( VALUES ( Calendario[Fecha] ), NOT ISBLANK ( [Índice] ) )",
+              "RETURN",
+              "    IF ( COUNTROWS ( MesesConDato ) > 1, STDEVX.S ( MesesConDato, [Índice] ) * 100 )"
+            ],
+            "formatString": "0.00",
+            "lineageTag": "e27d7b82-2daa-5b76-8080-cfb5c99ae8e8"
+          },
+          {
+            "name": "Rango (pp)",
+            "expression": [
+              "VAR MesesConDato =",
+              "    FILTER ( VALUES ( Calendario[Fecha] ), NOT ISBLANK ( [Índice] ) )",
+              "RETURN",
+              "    ( MAXX ( MesesConDato, [Índice] ) - MINX ( MesesConDato, [Índice] ) ) * 100"
+            ],
+            "formatString": "0.00",
+            "lineageTag": "a94a364c-18b7-55f4-8577-1723c38fd839"
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "name": "fbf15ebf-7d1b-5354-aaea-837097a0ce70",
+        "fromTable": "Provisiones",
+        "fromColumn": "Banco Original",
+        "toTable": "Bancos",
+        "toColumn": "Banco Original"
+      },
+      {
+        "name": "3780ee6b-8b71-58dc-8d8c-1389b6912b75",
+        "fromTable": "Provisiones",
+        "fromColumn": "Fecha",
+        "toTable": "Calendario",
+        "toColumn": "Fecha"
+      }
+    ],
+    "expressions": [
+      {
+        "name": "RutaDatos",
+        "kind": "m",
+        "expression": "\"C:\\ChlenixProjects\\ProyectosPersonales\\Proyectos\\proyectopersonalcmf\\\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
+        "lineageTag": "053b0093-a6cf-5a8f-925a-cafbd01e01fb",
+        "annotations": [
+          {
+            "name": "PBI_ResultType",
+            "value": "Text"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "name": "__PBI_TimeIntelligenceEnabled",
+        "value": "0"
+      },
+      {
+        "name": "PBI_QueryOrder",
+        "value": "[\"RutaDatos\",\"Provisiones\",\"Bancos\"]"
+      },
+      {
+        "name": "PBI_ProTooling",
+        "value": "[\"DevMode\"]"
+      }
+    ]
+  }
+}

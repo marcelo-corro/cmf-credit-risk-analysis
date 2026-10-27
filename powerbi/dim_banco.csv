@@ -1,0 +1,32 @@
+banco_original,banco,segmento,orden_segmento,nota
+Sistema Bancario,Sistema Bancario,Sistema,0,Índice oficial del sistema publicado por la CMF
+Banco de Chile,Banco de Chile,Grandes privados,1,
+Banco Santander-Chile,Santander,Grandes privados,1,
+Banco de Crédito e Inversiones,BCI,Grandes privados,1,
+Banco Itaú Chile,Itaú,Grandes privados,1,Ene-mar 2016: Itaú previo a la fusión. Desde abr 2023: ex Itaú Corpbanca
+Itaú Corpbanca,Itaú,Grandes privados,1,Nombre entre abr 2016 y mar 2023
+Corpbanca,Corpbanca,Grandes privados,1,Se fusionó con Itaú en abr 2016
+Scotiabank Chile,Scotiabank,Grandes privados,1,
+"Banco Bilbao Vizcaya Argentaria, Chile",BBVA,Grandes privados,1,Adquirido por Scotiabank en 2018
+Scotiabank Azul,BBVA,Grandes privados,1,Nombre de BBVA Chile tras su compra por Scotiabank
+Banco del Estado de Chile,BancoEstado,Estatal,2,
+Banco Falabella,Falabella,Retail,3,
+Banco Ripley,Ripley,Retail,3,
+Banco Paris,Paris,Retail,3,
+Banco Bice,Bice,Medianos y nicho,4,
+Banco Security,Security,Medianos y nicho,4,
+Banco Consorcio,Consorcio,Medianos y nicho,4,
+Banco Internacional,Internacional,Medianos y nicho,4,
+Banco BTG Pactual Chile,BTG Pactual,Medianos y nicho,4,
+Banco Penta,Penta,Medianos y nicho,4,
+Tanner Banco Digital,Tanner,Medianos y nicho,4,
+HSBC Bank (Chile),HSBC,Extranjeros,5,
+"JP Morgan Chase Bank, N.A.",JP Morgan,Extranjeros,5,
+Banco do Brasil S.A.,Banco do Brasil,Extranjeros,5,
+"Bank of China, Agencia en Chile",Bank of China,Extranjeros,5,
+"China Construction Bank, Agencia en Chile",China Construction Bank,Extranjeros,5,
+Deutsche Bank (Chile),Deutsche Bank,Extranjeros,5,
+"MUFG Bank, Ltd.",MUFG,Extranjeros,5,
+"The Bank of Tokyo-Mitsubishi UFJ, Ltd.",MUFG,Extranjeros,5,Pasó a llamarse MUFG Bank en 2018
+Rabobank Chile,Rabobank,Extranjeros,5,
+Banco de la Nación Argentina,Banco Nación,Extranjeros,5,

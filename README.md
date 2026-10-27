@@ -1,6 +1,6 @@
 # Análisis de Riesgo de Crédito — Sistema Bancario Chileno
 
-🔗 **[Ver dashboard en vivo](https://cmf-credit-risk-chile-mact.streamlit.app/)**
+🔗 **[Ver dashboard en vivo](https://cmf-credit-risk-chile-mact.streamlit.app/)** · 📊 **[Versión en Power BI](#dashboard-en-power-bi)**
 
 Análisis exploratorio de los índices de provisiones por riesgo de crédito del sistema bancario chileno entre 2016 y 2026, basado en datos públicos de la Comisión para el Mercado Financiero (CMF).
 
@@ -21,8 +21,12 @@ El pipeline valida los encabezados de cada archivo antes de extraer los datos, p
 ├── src/
 │   ├── descargar_archivos.py   # Script de descarga automática desde CMF
 │   └── consolidar_datos.py     # Pipeline de consolidación y limpieza
-└── dashboard/
-    └── app.py            # Dashboard interactivo (Streamlit)
+├── dashboard/
+│   └── app.py            # Dashboard interactivo (Streamlit)
+└── powerbi/
+    ├── RiesgoCreditoCMF.pbip   # Proyecto Power BI (modelo semántico + informe)
+    ├── dim_banco.csv           # Tabla maestra de bancos y segmentos
+    └── pantallazos/            # Capturas del informe
 ```
 
 ## Tecnologías utilizadas
@@ -30,6 +34,7 @@ El pipeline valida los encabezados de cada archivo antes de extraer los datos, p
 - Python · Pandas · NumPy
 - Matplotlib · Seaborn · Plotly
 - Streamlit
+- Power BI · Power Query (M) · DAX
 - openpyxl · xlrd
 - Git / GitHub
 
@@ -49,6 +54,32 @@ https://www.cmfchile.cl/portal/estadisticas/626/w4-propertyvalue-29875.html
 - **Divergencia reciente:** Banco Falabella bajó de 10.72% (dic. 2023) a 6.73% (mar. 2026), quedando por debajo de Banco de Chile (7.28%), y BancoEstado bajó de 13.77% (nov. 2024) a 11.64%. En el mismo período, Banco de Chile subió de 6.44% (promedio 2022) a 7.36% (promedio 2026).
 
 *Un índice de provisiones más alto no implica necesariamente peor gestión: también refleja políticas de provisiones más prudentes y cambios normativos.*
+
+## Dashboard en Power BI
+
+Versión del análisis en Power BI, construida sobre los mismos CSV del pipeline.
+
+**Resumen del sistema**
+![Resumen del sistema](powerbi/pantallazos/1.png)
+
+**Comparativa de bancos**
+![Comparativa de bancos](powerbi/pantallazos/2.png)
+
+**Riesgo y estabilidad**
+![Riesgo y estabilidad](powerbi/pantallazos/3.png)
+
+### Modelo de datos (esquema estrella)
+
+| Tabla | Tipo | Contenido |
+|---|---|---|
+| `Provisiones` | Hechos | Una fila por banco, mes y tipo de crédito (7.980 filas), incluida la fila oficial del sistema bancario |
+| `Bancos` | Dimensión | Tabla maestra (`powerbi/dim_banco.csv`) que unifica cambios de nombre y fusiones (Corpbanca → Itaú Corpbanca → Banco Itaú Chile; BBVA → Scotiabank Azul) y agrupa por segmento |
+| `Calendario` | Dimensión | Calendario mensual con períodos pre-COVID, COVID y post-COVID |
+
+- **Power Query:** une los CSV por banco y del sistema, despivota los tipos de crédito y convierte los números con cultura fija, para que la carga no dependa del idioma de Windows.
+- **Medidas DAX:** índice, índice oficial del sistema, brecha vs sistema (pp), variación 12 meses (pp), último dato, ranking, desviación estándar y rango. La medida base devuelve vacío si el contexto mezcla tipos de crédito, para evitar promedios sin sentido.
+
+**Cómo abrirlo:** abrir `powerbi/RiesgoCreditoCMF.pbip` en Power BI Desktop, ajustar el parámetro `RutaDatos` a la carpeta del proyecto (Transformar datos → Editar parámetros) y presionar **Actualizar**.
 
 ## Cómo ejecutar
 
