@@ -33,10 +33,11 @@ COVID_END   = "2021-06-01"
 def cargar_datos():
     df_prov = pd.read_csv(DATA_DIR / "provisiones_por_tipo.csv", parse_dates=["fecha"])
     df_cart = pd.read_csv(DATA_DIR / "calidad_cartera.csv",      parse_dates=["fecha"])
-    return df_prov, df_cart
+    df_sis  = pd.read_csv(DATA_DIR / "provisiones_por_tipo_sistema.csv", parse_dates=["fecha"])
+    return df_prov, df_cart, df_sis
 
 
-df_prov, df_cart = cargar_datos()
+df_prov, df_cart, df_sis = cargar_datos()
 
 # Bancos con al menos 60 meses de datos para no mostrar instituciones fugaces
 bancos_validos = (
@@ -118,16 +119,12 @@ if bancos_sel and not df_filtrado.empty:
 
 # ── Vista 1: Evolución del sistema ───────────────────────────────────────────
 st.subheader("Evolución del sistema bancario")
+st.caption("Índice oficial del sistema publicado por la CMF: provisiones totales sobre colocaciones totales.")
 
-df_sistema = (
-    df_prov[
-        (df_prov["fecha"].dt.year >= anio_min) &
-        (df_prov["fecha"].dt.year <= anio_max)
-    ]
-    .groupby("fecha")[list(TIPOS.values())]
-    .mean()
-    .reset_index()
-)
+df_sistema = df_sis[
+    (df_sis["fecha"].dt.year >= anio_min) &
+    (df_sis["fecha"].dt.year <= anio_max)
+]
 
 fig_sistema = go.Figure()
 colores = ["#1f77b4", "#ff7f0e", "#2ca02c"]
@@ -235,36 +232,36 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.info(
-        "**COVID dejó una huella permanente**  \n"
-        "El índice de consumo del sistema saltó de 2.97% (pre-pandemia) a 4.09% durante 2020–2021. "
-        "Post-COVID se estabilizó en ~3.13%, sin volver al nivel previo."
+        "**COVID: alza inicial y luego caída**  \n"
+        "El índice de consumo del sistema pasó de 6.22% (pre-pandemia) a un peak de 7.02% a mediados de 2020, "
+        "y cayó a 5.70% en septiembre–octubre 2021, en coincidencia con los retiros de fondos de pensiones "
+        "y las ayudas estatales."
     )
     st.info(
-        "**Bancos de retail lideran el riesgo**  \n"
-        "Banco Ripley (10.4%) y Banco Falabella (4.0%) tienen los índices de consumo más altos del sistema, "
-        "reflejo de su foco en crédito masivo de mayor riesgo."
+        "**Post-pandemia el riesgo superó los niveles previos**  \n"
+        "Desde 2022 el índice de consumo promedia 7.47%. 2025 cerró con 7.92%, el promedio anual "
+        "más alto del período (peak de 8.19% en febrero 2025)."
     )
     st.info(
-        "**El crédito hipotecario es el más seguro**  \n"
-        "El índice de vivienda se mantiene consistentemente por debajo de consumo y comercial "
-        "en todos los años analizados."
+        "**BancoEstado lidera el riesgo de consumo**  \n"
+        "Con un índice promedio de 10.53%, seguido por Banco Ripley (9.22%) y Banco Falabella (7.54%)."
     )
 
 with col2:
     st.success(
-        "**Banco de Chile y BCI son los más estables**  \n"
-        "Con variaciones históricas de solo 0.69 y 0.84 puntos respectivamente en consumo, "
-        "son los bancos con la cartera más consistente del período."
+        "**Banco de Chile tiene la cartera de consumo más estable**  \n"
+        "Su índice se movió en un rango de 2.2 puntos (5.42%–7.62%), el menor entre los bancos "
+        "con historia completa. Le sigue Santander (2.6 puntos)."
     )
     st.success(
-        "**Tendencia positiva desde 2025**  \n"
-        "El índice de consumo del sistema bajó de 3.33% en 2023 a 2.75% en 2025, "
-        "la cifra más baja desde 2016, lo que sugiere normalización del riesgo crediticio."
+        "**El crédito hipotecario es el más seguro**  \n"
+        "El índice de vivienda está bajo consumo y comercial en el 100% de los meses y bancos. "
+        "En el sistema bajó de 0.94% (2016) a 0.62% (2026)."
     )
     st.success(
-        "**Convergencia post-fusiones**  \n"
-        "La salida de bancos pequeños y fusiones (Corpbanca → Itaú, Scotiabank) redujeron "
-        "la dispersión de riesgo entre instituciones, concentrando el sistema."
+        "**Divergencia reciente entre bancos**  \n"
+        "Banco Falabella bajó de 10.72% (dic. 2023) a 6.73% (mar. 2026) y BancoEstado de 13.77% "
+        "(nov. 2024) a 11.64%, mientras Banco de Chile subió de 6.44% (2022) a 7.36% (2026)."
     )
 
 st.divider()

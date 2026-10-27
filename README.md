@@ -6,14 +6,16 @@ Análisis exploratorio de los índices de provisiones por riesgo de crédito del
 
 ## Descripción
 
-Este proyecto consolida, limpia y analiza más de 120 reportes mensuales publicados por la CMF, construyendo un dataset histórico que permite visualizar la evolución del riesgo crediticio por banco y tipo de cartera (comercial, consumo, vivienda).
+Este proyecto consolida, limpia y analiza 123 reportes mensuales publicados por la CMF (enero 2016 – marzo 2026), construyendo un dataset histórico que permite visualizar la evolución del riesgo crediticio por banco y tipo de cartera (comercial, consumo, vivienda).
+
+El pipeline valida los encabezados de cada archivo antes de extraer los datos, para detectar cambios de formato de la CMF, y usa el índice oficial del sistema bancario publicado por la CMF para las cifras agregadas (en lugar de un promedio simple entre bancos).
 
 ## Estructura del proyecto
 
 ```
 ├── data/
 │   ├── raw/              # Archivos Excel originales descargados desde CMF
-│   └── processed/        # Datasets consolidados en CSV
+│   └── processed/        # Datasets consolidados en CSV (por banco y *_sistema)
 ├── notebooks/
 │   └── 01_eda.ipynb      # Análisis exploratorio de datos
 ├── src/
@@ -39,11 +41,14 @@ https://www.cmfchile.cl/portal/estadisticas/626/w4-propertyvalue-29875.html
 
 ## Principales hallazgos
 
-- El índice de consumo del sistema saltó de 2.97% (pre-COVID) a 4.09% durante la pandemia, sin volver completamente a niveles previos.
-- Banco Ripley (10.4%) y Banco Falabella (4.0%) lideran consistentemente el riesgo de consumo, reflejo de su modelo de crédito masivo.
-- Banco de Chile y BCI presentan las carteras más estables del período (variación histórica < 1 punto).
-- El crédito de vivienda se mantiene como el de menor riesgo en todos los años analizados.
-- Desde 2025 se observa una tendencia a la baja, con el índice de consumo en 2.75%, el nivel más bajo desde 2016.
+- **COVID: alza inicial y luego caída.** El índice de consumo del sistema pasó de 6.22% (promedio pre-COVID) a un peak de 7.02% a mediados de 2020, y luego cayó a 5.70% en septiembre–octubre 2021, el mínimo de la serie, en coincidencia con los retiros de fondos de pensiones y las ayudas estatales.
+- **Post-pandemia, el riesgo de consumo superó los niveles previos.** Desde 2022 el índice promedia 7.47%, y 2025 cerró con 7.92%, el promedio anual más alto del período (peak mensual de 8.19% en febrero 2025).
+- **BancoEstado lidera el riesgo de consumo** con un índice promedio de 10.53%, seguido por Banco Ripley (9.22%) y Banco Falabella (7.54%).
+- **Banco de Chile tiene la cartera de consumo más estable:** su índice se movió en un rango de 2.2 puntos (5.42%–7.62%), el menor entre los bancos con historia completa. Le sigue Santander (2.6 puntos).
+- **Vivienda es el crédito de menor riesgo** en el 100% de los meses y bancos analizados. El índice del sistema bajó de 0.94% (2016) a 0.62% (2026).
+- **Divergencia reciente:** Banco Falabella bajó de 10.72% (dic. 2023) a 6.73% (mar. 2026), quedando por debajo de Banco de Chile (7.28%), y BancoEstado bajó de 13.77% (nov. 2024) a 11.64%. En el mismo período, Banco de Chile subió de 6.44% (promedio 2022) a 7.36% (promedio 2026).
+
+*Un índice de provisiones más alto no implica necesariamente peor gestión: también refleja políticas de provisiones más prudentes y cambios normativos.*
 
 ## Cómo ejecutar
 

@@ -2,6 +2,9 @@
 Consolida todos los archivos Excel mensuales de la CMF en dos DataFrames:
 - cuadro1: índice de provisiones por banco y tipo de crédito
 - cuadro2: calidad de cartera (normal, subestándar, en incumplimiento)
+
+La fila "Sistema Bancario" (índice oficial del sistema publicado por la CMF)
+se guarda en un CSV aparte para no mezclarla con los bancos.
 """
 
 import re
@@ -15,8 +18,50 @@ RAW_DIR = Path(__file__).parent.parent / "data" / "raw"
 OUT_DIR = Path(__file__).parent.parent / "data" / "processed"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Bancos que no son instituciones reales (filas de totales o separadores)
-FILAS_IGNORAR = {"sistema bancario", "total"}
+NOMBRE_SISTEMA = "Sistema Bancario"
+
+# Filas que no son instituciones reales (totales o separadores)
+FILAS_IGNORAR = {"total"}
+
+# Los datos de ambos cuadros arrancan en la fila 15 de Excel (base 0: 14)
+FILA_INICIO_DATOS = 14
+
+# Posición (base 0) de cada índice. Es la misma en .xls y .xlsx.
+# "encabezados" son (fila, columna, texto esperado) para verificar que la CMF
+# no cambió el formato antes de confiar en las posiciones.
+CUADRO1 = {
+    "hoja": 1,
+    "columnas": {
+        "indice_total": 3,
+        "indice_comercial": 5,
+        "indice_consumo": 7,
+        "indice_vivienda": 8,
+    },
+    "encabezados": [
+        (8, 3, "provisiones"),
+        (11, 5, "comercial"),
+        (11, 7, "consumo"),
+        (11, 8, "vivienda"),
+    ],
+}
+
+CUADRO2 = {
+    "hoja": 2,
+    "columnas": {
+        "indice_ev_individual": 3,
+        "indice_ev_grupal": 5,
+        "indice_cartera_normal": 8,
+        "indice_cartera_subestandar": 10,
+        "indice_cartera_incumplimiento": 12,
+    },
+    "encabezados": [
+        (9, 3, "individual"),
+        (9, 5, "grupal"),
+        (9, 8, "normal"),
+        (9, 10, "subest"),
+        (9, 12, "incumplimiento"),
+    ],
+}
 
 
 def fecha_desde_nombre(path: Path) -> pd.Timestamp | None:
@@ -42,59 +87,58 @@ def es_banco(valor) -> bool:
     return limpio not in FILAS_IGNORAR and not limpio.startswith("nota")
 
 
-def extraer_cuadro1(ws, fecha: pd.Timestamp) -> list[dict]:
+def leer_hojas(path: Path, indices: list[int]) -> dict[int, list]:
     """
-    Cuadro 1: índice de provisiones por banco, desglosado en total,
-    comercial, consumo y vivienda. Los datos siempre arrancan en fila 15.
+    Devuelve {índice de hoja: filas}, con cada fila como lista de valores.
+    Los .xls antiguos se leen con xlrd y los .xlsx con openpyxl. Las hojas se
+    buscan por índice porque sus nombres tienen problemas de encoding.
     """
+    if path.suffix.lower() == ".xls":
+        wb = xlrd.open_workbook(path)
+        hojas = {}
+        for i in indices:
+            if i < wb.nsheets:
+                ws = wb.sheet_by_index(i)
+                hojas[i] = [ws.row_values(r) for r in range(ws.nrows)]
+        return hojas
+
+    wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+    try:
+        nombres = wb.sheetnames
+        return {
+            i: [list(r) for r in wb[nombres[i]].iter_rows(values_only=True)]
+            for i in indices if i < len(nombres)
+        }
+    finally:
+        wb.close()
+
+
+def encabezados_validos(filas: list, cuadro: dict) -> bool:
+    """Verifica que los encabezados estén donde el cuadro espera."""
+    for fila, col, texto in cuadro["encabezados"]:
+        celda = filas[fila][col] if len(filas) > fila and len(filas[fila]) > col else None
+        if not isinstance(celda, str) or texto not in celda.lower():
+            return False
+    return True
+
+
+def extraer_cuadro(filas: list, fecha: pd.Timestamp, cuadro: dict) -> list[dict]:
+    """Recorre las filas de bancos y toma los índices según las columnas del cuadro."""
     registros = []
 
-    for row in ws.iter_rows(min_row=15, values_only=True):
+    for row in filas[FILA_INICIO_DATOS:]:
         banco = row[1] if len(row) > 1 else None
         if not es_banco(banco):
             continue
 
         # Si ya llegamos a las notas al pie, paramos
-        if isinstance(banco, str) and banco.strip().startswith("("):
+        if banco.strip().startswith("("):
             break
 
-        registros.append({
-            "fecha": fecha,
-            "banco": limpiar_nombre_banco(banco),
-            "indice_total": row[3] if len(row) > 3 else None,
-            "indice_comercial": row[4] if len(row) > 4 else None,
-            "indice_consumo": row[5] if len(row) > 5 else None,
-            "indice_vivienda": row[6] if len(row) > 6 else None,
-        })
-
-    return registros
-
-
-def extraer_cuadro2(ws, fecha: pd.Timestamp) -> list[dict]:
-    """
-    Cuadro 2: calidad de cartera — índice de provisiones según evaluación
-    individual/grupal y clasificación (normal, subestándar, en incumplimiento).
-    Los datos arrancan en fila 14.
-    """
-    registros = []
-
-    for row in ws.iter_rows(min_row=14, values_only=True):
-        banco = row[1] if len(row) > 1 else None
-        if not es_banco(banco):
-            continue
-
-        if isinstance(banco, str) and banco.strip().startswith("("):
-            break
-
-        registros.append({
-            "fecha": fecha,
-            "banco": limpiar_nombre_banco(banco),
-            "indice_ev_individual": row[3] if len(row) > 3 else None,
-            "indice_ev_grupal": row[5] if len(row) > 5 else None,
-            "indice_cartera_normal": row[8] if len(row) > 8 else None,
-            "indice_cartera_subestandar": row[10] if len(row) > 10 else None,
-            "indice_cartera_incumplimiento": row[12] if len(row) > 12 else None,
-        })
+        registro = {"fecha": fecha, "banco": limpiar_nombre_banco(banco)}
+        for nombre, col in cuadro["columnas"].items():
+            registro[nombre] = row[col] if len(row) > col else None
+        registros.append(registro)
 
     return registros
 
@@ -106,76 +150,23 @@ def procesar_archivo(path: Path) -> tuple[list, list]:
         print(f"  Saltando {path.name} — no se pudo leer la fecha del nombre")
         return [], []
 
-    # Los .xls antiguos usan xlrd, los .xlsx usan openpyxl
-    if path.suffix.lower() == ".xls":
-        return procesar_xls(path, fecha)
-
+    cuadros = (CUADRO1, CUADRO2)
     try:
-        wb = openpyxl.load_workbook(path, data_only=True)
+        hojas = leer_hojas(path, [c["hoja"] for c in cuadros])
     except Exception as e:
         print(f"  Error leyendo {path.name}: {e}")
         return [], []
 
-    # Los nombres de las hojas tienen problemas de encoding, usamos índice
-    sheet_names = wb.sheetnames
-    c1 = extraer_cuadro1(wb[sheet_names[1]], fecha) if len(sheet_names) > 1 else []
-    c2 = extraer_cuadro2(wb[sheet_names[2]], fecha) if len(sheet_names) > 2 else []
+    resultados = []
+    for cuadro in cuadros:
+        filas = hojas.get(cuadro["hoja"])
+        if filas is None or not encabezados_validos(filas, cuadro):
+            print(f"  {path.name}: la hoja {cuadro['hoja']} no tiene el formato esperado, se omite")
+            resultados.append([])
+        else:
+            resultados.append(extraer_cuadro(filas, fecha, cuadro))
 
-    wb.close()
-    return c1, c2
-
-
-def procesar_xls(path: Path, fecha: pd.Timestamp) -> tuple[list, list]:
-    """Procesa archivos .xls (formato antiguo) usando xlrd."""
-    try:
-        wb = xlrd.open_workbook(path)
-    except Exception as e:
-        print(f"  Error leyendo {path.name}: {e}")
-        return [], []
-
-    def iter_rows(sheet, min_row=0):
-        for i in range(min_row, sheet.nrows):
-            yield sheet.row_values(i)
-
-    # Cuadro 1 es la hoja índice 1, Cuadro 2 es la hoja índice 2
-    c1, c2 = [], []
-
-    if wb.nsheets > 1:
-        ws1 = wb.sheet_by_index(1)
-        for row in iter_rows(ws1, min_row=14):
-            banco = row[1] if len(row) > 1 else None
-            if not es_banco(banco):
-                continue
-            if isinstance(banco, str) and banco.strip().startswith("("):
-                break
-            c1.append({
-                "fecha": fecha,
-                "banco": limpiar_nombre_banco(banco),
-                "indice_total": row[2] if len(row) > 2 else None,
-                "indice_comercial": row[3] if len(row) > 3 else None,
-                "indice_consumo": row[4] if len(row) > 4 else None,
-                "indice_vivienda": row[5] if len(row) > 5 else None,
-            })
-
-    if wb.nsheets > 2:
-        ws2 = wb.sheet_by_index(2)
-        for row in iter_rows(ws2, min_row=13):
-            banco = row[1] if len(row) > 1 else None
-            if not es_banco(banco):
-                continue
-            if isinstance(banco, str) and banco.strip().startswith("("):
-                break
-            c2.append({
-                "fecha": fecha,
-                "banco": limpiar_nombre_banco(banco),
-                "indice_ev_individual": row[2] if len(row) > 2 else None,
-                "indice_ev_grupal": row[4] if len(row) > 4 else None,
-                "indice_cartera_normal": row[6] if len(row) > 6 else None,
-                "indice_cartera_subestandar": row[8] if len(row) > 8 else None,
-                "indice_cartera_incumplimiento": row[10] if len(row) > 10 else None,
-            })
-
-    return c1, c2
+    return resultados[0], resultados[1]
 
 
 def limpiar_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -185,6 +176,18 @@ def limpiar_df(df: pd.DataFrame) -> pd.DataFrame:
         if col not in ("fecha", "banco"):
             df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
+
+
+def guardar(df: pd.DataFrame, nombre: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Ordena y guarda las filas por banco y las del sistema en CSV separados."""
+    df = df.sort_values(["fecha", "banco"]).reset_index(drop=True)
+    es_sistema = df["banco"] == NOMBRE_SISTEMA
+
+    df_bancos = df[~es_sistema]
+    df_sistema = df[es_sistema]
+    df_bancos.to_csv(OUT_DIR / f"{nombre}.csv", index=False)
+    df_sistema.to_csv(OUT_DIR / f"{nombre}_sistema.csv", index=False)
+    return df_bancos, df_sistema
 
 
 def main():
@@ -199,20 +202,14 @@ def main():
         todos_c1.extend(c1)
         todos_c2.extend(c2)
 
-    # Armar y limpiar DataFrames
-    df_c1 = limpiar_df(pd.DataFrame(todos_c1))
-    df_c2 = limpiar_df(pd.DataFrame(todos_c2))
+    # Armar, limpiar y guardar DataFrames
+    df_c1, sis_c1 = guardar(limpiar_df(pd.DataFrame(todos_c1)), "provisiones_por_tipo")
+    df_c2, sis_c2 = guardar(limpiar_df(pd.DataFrame(todos_c2)), "calidad_cartera")
 
-    # Ordenar por fecha y banco
-    df_c1 = df_c1.sort_values(["fecha", "banco"]).reset_index(drop=True)
-    df_c2 = df_c2.sort_values(["fecha", "banco"]).reset_index(drop=True)
-
-    # Guardar
-    df_c1.to_csv(OUT_DIR / "provisiones_por_tipo.csv", index=False)
-    df_c2.to_csv(OUT_DIR / "calidad_cartera.csv", index=False)
-
-    print(f"\nDataset cuadro 1: {df_c1.shape[0]} filas × {df_c1.shape[1]} columnas")
-    print(f"Dataset cuadro 2: {df_c2.shape[0]} filas × {df_c2.shape[1]} columnas")
+    print(f"\nDataset cuadro 1: {df_c1.shape[0]} filas × {df_c1.shape[1]} columnas "
+          f"(+ {len(sis_c1)} meses del sistema)")
+    print(f"Dataset cuadro 2: {df_c2.shape[0]} filas × {df_c2.shape[1]} columnas "
+          f"(+ {len(sis_c2)} meses del sistema)")
     print(f"\nBancos encontrados: {sorted(df_c1['banco'].unique())}")
     print(f"\nRango de fechas: {df_c1['fecha'].min().date()} a {df_c1['fecha'].max().date()}")
     print("\nArchivos guardados en data/processed/")
